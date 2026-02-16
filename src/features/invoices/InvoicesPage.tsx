@@ -62,10 +62,10 @@ export default function InvoicesPage() {
     fetchInvoices()
   }
 
-  if (loading) return <p>Loading...</p>
+  if (loading) return <p data-qa-tests="loading-text">Loading...</p>
 
   return (
-    <div>
+    <div data-qa-tests="invoices-page">
       <h1 data-qa-tests="invoices-title">Invoices</h1>
 
       <input
@@ -94,12 +94,12 @@ export default function InvoicesPage() {
         Create
       </button>
 
-      <ul>
+      <ul data-qa-tests="invoice-list">
         {invoices.map(i => (
-          <li key={i.id} data-testid="invoice-row">
+          <li key={i.id} data-qa-tests="invoice-row">
             {i.client} - ${i.amount} - {i.status}
             <button
-              data-testid="delete-invoice-btn"
+              data-qa-tests="delete-invoice-btn"
               onClick={() => handleDelete(i.id)}
             >
               Delete

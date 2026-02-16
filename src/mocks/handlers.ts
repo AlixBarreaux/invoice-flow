@@ -1,29 +1,24 @@
-import { http, HttpResponse } from "msw"
+import { rest } from "msw"
 
 let invoices = [
-  {
-    id: "1",
-    client: "Acme Corp",
-    amount: 500,
-    status: "paid",
-    date: "2026-02-16"
-  }
+  { id: "1", client: "Acme Corp", amount: 500, status: "paid", date: "2026-02-16" }
 ]
 
 export const handlers = [
-  http.get("/api/invoices", () => {
-    return HttpResponse.json(invoices)
+  rest.get("/api/invoices", (req, res, ctx) => {
+    return res(ctx.status(200), ctx.json(invoices))
   }),
 
-  http.post("/api/invoices", async ({ request }) => {
-    const newInvoice = await request.json()
+  rest.post("/api/invoices", async (req, res, ctx) => {
+    const newInvoice = await req.json()
     const invoice = { ...newInvoice, id: crypto.randomUUID() }
     invoices.push(invoice)
-    return HttpResponse.json(invoice, { status: 201 })
+    return res(ctx.status(201), ctx.json(invoice))
   }),
 
-  http.delete("/api/invoices/:id", ({ params }) => {
-    invoices = invoices.filter(i => i.id !== params.id)
-    return new HttpResponse(null, { status: 204 })
+  rest.delete("/api/invoices/:id", (req, res, ctx) => {
+    const { id } = req.params
+    invoices = invoices.filter(inv => inv.id !== id)
+    return res(ctx.status(204))
   })
 ]
