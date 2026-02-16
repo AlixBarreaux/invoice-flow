@@ -22,17 +22,22 @@ export default function LoginPage() {
       <h1>Login</h1>
       <form onSubmit={handleSubmit}>
         <input
+          data-qa-tests="email-input"
           placeholder="Email"
           value={email}
           onChange={e => setEmail(e.target.value)}
         />
         <input
+          data-qa-tests="password-input"
           placeholder="Password"
           type="password"
           value={password}
           onChange={e => setPassword(e.target.value)}
         />
-        <button type="submit">Login</button>
+        <button
+          data-qa-tests="login-btn"
+          type="submit">Login
+        </button>
       </form>
     </div>
   )

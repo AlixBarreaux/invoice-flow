@@ -12,24 +12,98 @@ export default function InvoicesPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
+  const [client, setClient] = useState("")
+  const [amount, setAmount] = useState("")
+  const [status, setStatus] = useState("unpaid")
+
+  const fetchInvoices = () => {
+    setLoading(true)
     fetch("/api/invoices")
       .then(res => res.json())
       .then(data => {
         setInvoices(data)
         setLoading(false)
       })
+  }
+
+  useEffect(() => {
+    fetchInvoices()
   }, [])
+
+  const handleCreate = async () => {
+    if (!client || Number(amount) <= 0) {
+      alert("Invalid input")
+      return
+    }
+
+    await fetch("/api/invoices", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        client,
+        amount: Number(amount),
+        status,
+        date: new Date().toISOString().split("T")[0]
+      })
+    })
+
+    setClient("")
+    setAmount("")
+    setStatus("unpaid")
+
+    fetchInvoices()
+  }
+
+  const handleDelete = async (id: string) => {
+    await fetch(`/api/invoices/${id}`, {
+      method: "DELETE"
+    })
+
+    fetchInvoices()
+  }
 
   if (loading) return <p>Loading...</p>
 
   return (
     <div>
-      <h1>Invoices</h1>
+      <h1 data-qa-tests="invoices-title">Invoices</h1>
+
+      <input
+        data-qa-tests="client-input"
+        placeholder="Client"
+        value={client}
+        onChange={e => setClient(e.target.value)}
+      />
+
+      <input
+        data-qa-tests="amount-input"
+        type="number"
+        value={amount}
+        onChange={e => setAmount(e.target.value)}
+      />
+
+      <select
+        data-qa-tests="status-select"
+        value={status}
+        onChange={e => setStatus(e.target.value)}
+      >
+        <option value="paid">Paid</option>
+        <option value="unpaid">Unpaid</option>
+      </select>
+      <button data-qa-tests="create-invoice-btn" onClick={handleCreate}>
+        Create
+      </button>
+
       <ul>
         {invoices.map(i => (
-          <li key={i.id}>
+          <li key={i.id} data-testid="invoice-row">
             {i.client} - ${i.amount} - {i.status}
+            <button
+              data-testid="delete-invoice-btn"
+              onClick={() => handleDelete(i.id)}
+            >
+              Delete
+            </button>
           </li>
         ))}
       </ul>
