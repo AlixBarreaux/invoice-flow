@@ -1,24 +1,41 @@
-import { rest } from "msw"
+import { http, HttpResponse } from "msw"
 
-let invoices = [
-  { id: "1", client: "Acme Corp", amount: 500, status: "paid", date: "2026-02-16" }
+type Invoice = {
+  id: string
+  client: string
+  amount: number
+  status: string
+  date: string
+}
+
+let invoices: Invoice[] = [
+  { id: "1", client: "Acme Corp", amount: 100, status: "unpaid", date: "2026-02-16" },
 ]
 
 export const handlers = [
-  rest.get("/api/invoices", (req, res, ctx) => {
-    return res(ctx.status(200), ctx.json(invoices))
+  // GET /api/invoices
+  http.get("/api/invoices", () => {
+    return HttpResponse.json(invoices)
   }),
 
-  rest.post("/api/invoices", async (req, res, ctx) => {
-    const newInvoice = await req.json()
-    const invoice = { ...newInvoice, id: crypto.randomUUID() }
+  // POST /api/invoices
+  http.post("/api/invoices", async ({ request }) => {
+    const { client, amount, status, date } = (await request.json()) as {
+      client: string
+      amount: number
+      status: string
+      date: string
+    }
+
+    const invoice: Invoice = { id: (Math.random() * 1000000).toFixed(0), client, amount, status, date }
     invoices.push(invoice)
-    return res(ctx.status(201), ctx.json(invoice))
+    return HttpResponse.json(invoice, { status: 201 })
   }),
 
-  rest.delete("/api/invoices/:id", (req, res, ctx) => {
-    const { id } = req.params
-    invoices = invoices.filter(inv => inv.id !== id)
-    return res(ctx.status(204))
-  })
+  // DELETE /api/invoices/:id
+  http.delete("/api/invoices/:id", ({ params }) => {
+    const { id } = params
+    invoices = invoices.filter(i => i.id !== id)
+    return new HttpResponse(null, { status: 204 })
+  }),
 ]
