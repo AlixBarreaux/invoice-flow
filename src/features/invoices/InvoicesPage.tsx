@@ -8,6 +8,8 @@ type Invoice = {
   date: string
 }
 
+const API_URL = "http://localhost:3001/api/invoices"
+
 export default function InvoicesPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [loading, setLoading] = useState(true)
@@ -16,14 +18,18 @@ export default function InvoicesPage() {
   const [amount, setAmount] = useState("")
   const [status, setStatus] = useState("unpaid")
 
-  const fetchInvoices = () => {
+  const fetchInvoices = async () => {
     setLoading(true)
-    fetch("/api/invoices")
-      .then(res => res.json())
-      .then(data => {
-        setInvoices(data)
-        setLoading(false)
-      })
+    try {
+      const res = await fetch(API_URL)
+      if (!res.ok) throw new Error("Network error")
+      const data = await res.json()
+      setInvoices(data)
+    } catch (e) {
+      alert("Failed to fetch invoices")
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -36,28 +42,35 @@ export default function InvoicesPage() {
       return
     }
 
-    await fetch("/api/invoices", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        client,
-        amount: Number(amount),
-        status,
-        date: new Date().toISOString().split("T")[0]
+    try {
+      const res = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client,
+          amount: Number(amount),
+          status,
+          date: new Date().toISOString().split("T")[0],
+        }),
       })
-    })
+      if (!res.ok) throw new Error("Create failed")
+    } catch (e) {
+      alert("Failed to create invoice")
+    }
 
     setClient("")
     setAmount("")
     setStatus("unpaid")
-
     fetchInvoices()
   }
 
   const handleDelete = async (id: string) => {
-    await fetch(`/api/invoices/${id}`, {
-      method: "DELETE"
-    })
+    try {
+      const res = await fetch(`${API_URL}/${id}`, { method: "DELETE" })
+      if (!res.ok) throw new Error("Delete failed")
+    } catch (e) {
+      alert("Failed to delete invoice")
+    }
 
     fetchInvoices()
   }
@@ -90,6 +103,7 @@ export default function InvoicesPage() {
         <option value="paid">Paid</option>
         <option value="unpaid">Unpaid</option>
       </select>
+
       <button data-qa-tests="create-invoice-btn" onClick={handleCreate}>
         Create
       </button>
