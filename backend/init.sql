@@ -1,0 +1,6 @@
+CREATE TABLE IF NOT EXISTS invoices (
+  id SERIAL PRIMARY KEY,
+  client VARCHAR(255) NOT NULL,
+  amount NUMERIC NOT NULL,
+  description TEXT
+);

@@ -8,7 +8,7 @@ type Invoice = {
   date: string
 }
 
-const API_URL = "http://localhost:3001/api/invoices"
+const API_URL = "http://localhost:3000/invoices"
 
 export default function InvoicesPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([])
