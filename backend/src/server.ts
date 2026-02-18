@@ -3,7 +3,11 @@ import cors from "cors";
 import { z } from "zod";
 import dotenv from "dotenv";
 import pkg from "pg";
-const { Pool } = pkg;
+
+const { Pool, types } = pkg;
+
+// Force Postgres NUMERIC (OID 1700) to return number instead of string
+types.setTypeParser(1700, (val: string) => parseFloat(val));
 
 dotenv.config();
 
@@ -44,7 +48,9 @@ app.get("/invoices/:id", async (req, res, next) => {
   try {
     const { id } = req.params;
     const result = await pool.query("SELECT * FROM invoices WHERE id=$1", [id]);
-    if (result.rows.length === 0) return res.status(404).json({ error: "Invoice not found" });
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Invoice not found" });
+    }
     res.json(result.rows[0]);
   } catch (err) {
     next(err);
@@ -74,7 +80,9 @@ app.put("/invoices/:id", async (req, res, next) => {
       "UPDATE invoices SET client=$1, amount=$2, description=$3 WHERE id=$4 RETURNING *",
       [data.client, data.amount, data.description || null, id]
     );
-    if (result.rows.length === 0) return res.status(404).json({ error: "Invoice not found" });
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Invoice not found" });
+    }
     res.json(result.rows[0]);
   } catch (err) {
     next(err);
@@ -85,8 +93,13 @@ app.put("/invoices/:id", async (req, res, next) => {
 app.delete("/invoices/:id", async (req, res, next) => {
   try {
     const { id } = req.params;
-    const result = await pool.query("DELETE FROM invoices WHERE id=$1 RETURNING *", [id]);
-    if (result.rows.length === 0) return res.status(404).json({ error: "Invoice not found" });
+    const result = await pool.query(
+      "DELETE FROM invoices WHERE id=$1 RETURNING *",
+      [id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Invoice not found" });
+    }
     res.json({ message: "Invoice deleted", invoice: result.rows[0] });
   } catch (err) {
     next(err);
