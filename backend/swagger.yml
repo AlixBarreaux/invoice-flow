@@ -42,7 +42,7 @@ paths:
                   description: "Monthly maintenance"
 
     post:
-      summary: Create an invoice
+      summary: Create a single invoice
       requestBody:
         required: true
         content:
@@ -65,6 +65,86 @@ paths:
                 client: "Acme Corporation"
                 amount: 1499.99
                 description: "Website development services"
+
+  /invoices/bulk:
+    post:
+      summary: Create several invoices at once
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/InvoiceInput"
+            example:
+              - client: "Acme Corporation"
+                amount: 1499.99
+                description: "Website development services"
+              - client: "Globex Ltd"
+                amount: 799.5
+                description: "Monthly maintenance"
+      responses:
+        201:
+          description: Bulk invoices created
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Invoice"
+              example:
+                - id: 4
+                  client: "Acme Corporation"
+                  amount: 1499.99
+                  description: "Website development services"
+                - id: 5
+                  client: "Globex Ltd"
+                  amount: 799.5
+                  description: "Monthly maintenance"
+
+    delete:
+      summary: Delete several invoices by IDs
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: integer
+              required:
+                - ids
+            example:
+              ids: [4, 5]
+      responses:
+        200:
+          description: Bulk invoices deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  deleted:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Invoice"
+              example:
+                message: "Invoices deleted successfully"
+                deleted:
+                  - id: 4
+                    client: "Acme Corporation"
+                    amount: 1499.99
+                    description: "Website development services"
+                  - id: 5
+                    client: "Globex Ltd"
+                    amount: 799.5
+                    description: "Monthly maintenance"
 
   /invoices/{id}:
     get:

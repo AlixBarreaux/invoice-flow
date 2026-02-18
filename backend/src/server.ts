@@ -3,7 +3,6 @@ import cors from "cors";
 import { z } from "zod";
 import dotenv from "dotenv";
 import { setupSwagger } from "../swagger";
-
 import pkg from "pg";
 
 const { Pool, types } = pkg;
@@ -26,84 +25,188 @@ const pool = new Pool({
   database: process.env.DB_NAME,
 });
 
-// Health check
-app.get("/", (req, res) => res.send("Invoice API running"));
+// --------------------
+// Schemas
+// --------------------
 
-// Zod schema for invoice creation/update
 const invoiceSchema = z.object({
   client: z.string(),
   amount: z.number(),
   description: z.string().optional(),
 });
 
-// GET all invoices
-app.get("/invoices", async (req, res, next) => {
-  try {
-    const result = await pool.query("SELECT * FROM invoices ORDER BY id ASC");
-    res.json(result.rows);
-  } catch (err) {
-    next(err);
-  }
+const bulkInvoiceSchema = z.array(invoiceSchema);
+
+const bulkDeleteSchema = z.object({
+  ids: z.array(z.number()).min(1),
 });
 
-// GET single invoice
-app.get("/invoices/:id", async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const result = await pool.query("SELECT * FROM invoices WHERE id=$1", [id]);
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Invoice not found" });
-    }
-    res.json(result.rows[0]);
-  } catch (err) {
-    next(err);
-  }
-});
+// --------------------
+// Routes
+// --------------------
 
-// POST create invoice
+// Health check
+app.get("/", (req, res) => res.send("Invoice API running"));
+
+// Create Single
 app.post("/invoices", async (req, res, next) => {
   try {
     const data = invoiceSchema.parse(req.body);
+
     const result = await pool.query(
       "INSERT INTO invoices (client, amount, description) VALUES ($1, $2, $3) RETURNING *",
-      [data.client, data.amount, data.description || null]
+      [data.client, data.amount, data.description ?? null]
     );
+
     res.status(201).json(result.rows[0]);
   } catch (err) {
     next(err);
   }
 });
 
-// PUT update invoice
-app.put("/invoices/:id", async (req, res, next) => {
+// Get All
+app.get("/invoices", async (req, res, next) => {
+  try {
+    const result = await pool.query(
+      "SELECT * FROM invoices ORDER BY id ASC"
+    );
+    res.json(result.rows);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// --------------------
+// Bulk Create (VALIDATED)
+// --------------------
+
+app.post("/invoices/bulk", async (req, res, next) => {
+  try {
+    const invoices = bulkInvoiceSchema.parse(req.body);
+
+    if (invoices.length === 0) {
+      return res.status(400).json({
+        message: "Array cannot be empty",
+      });
+    }
+
+    const values: any[] = [];
+    const placeholders: string[] = [];
+
+    invoices.forEach((inv, index) => {
+      const baseIndex = index * 3;
+
+      placeholders.push(
+        `($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3})`
+      );
+
+      values.push(
+        inv.client,
+        inv.amount,
+        inv.description ?? null
+      );
+    });
+
+    const result = await pool.query(
+      `
+      INSERT INTO invoices (client, amount, description)
+      VALUES ${placeholders.join(", ")}
+      RETURNING *
+      `,
+      values
+    );
+
+    res.status(201).json(result.rows);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// --------------------
+// Bulk Delete (VALIDATED)
+// --------------------
+
+app.delete("/invoices/bulk", async (req, res, next) => {
+  try {
+    const { ids } = bulkDeleteSchema.parse(req.body);
+
+    const result = await pool.query(
+      `
+      DELETE FROM invoices
+      WHERE id = ANY($1::int[])
+      RETURNING *
+      `,
+      [ids]
+    );
+
+    res.json({
+      message: "Invoices deleted successfully",
+      deleted: result.rows,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Get One
+app.get("/invoices/:id", async (req, res, next) => {
   try {
     const { id } = req.params;
-    const data = invoiceSchema.parse(req.body);
+
     const result = await pool.query(
-      "UPDATE invoices SET client=$1, amount=$2, description=$3 WHERE id=$4 RETURNING *",
-      [data.client, data.amount, data.description || null, id]
+      "SELECT * FROM invoices WHERE id=$1",
+      [id]
     );
+
     if (result.rows.length === 0) {
       return res.status(404).json({ error: "Invoice not found" });
     }
+
     res.json(result.rows[0]);
   } catch (err) {
     next(err);
   }
 });
 
-// DELETE invoice
+// Update One
+app.put("/invoices/:id", async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const data = invoiceSchema.parse(req.body);
+
+    const result = await pool.query(
+      "UPDATE invoices SET client=$1, amount=$2, description=$3 WHERE id=$4 RETURNING *",
+      [data.client, data.amount, data.description ?? null, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Invoice not found" });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Delete One
 app.delete("/invoices/:id", async (req, res, next) => {
   try {
     const { id } = req.params;
+
     const result = await pool.query(
       "DELETE FROM invoices WHERE id=$1 RETURNING *",
       [id]
     );
+
     if (result.rows.length === 0) {
       return res.status(404).json({ error: "Invoice not found" });
     }
-    res.json({ message: "Invoice deleted", invoice: result.rows[0] });
+
+    res.json({
+      message: "Invoice deleted",
+      invoice: result.rows[0],
+    });
   } catch (err) {
     next(err);
   }
