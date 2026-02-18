@@ -1,0 +1,197 @@
+openapi: 3.0.0
+info:
+  title: Invoice API
+  version: 1.0.0
+  description: API for managing invoices
+
+servers:
+  - url: http://localhost:3000
+
+paths:
+  /:
+    get:
+      summary: Health check
+      responses:
+        200:
+          description: API running message
+          content:
+            application/json:
+              example:
+                message: "API is running"
+
+  /invoices:
+    get:
+      summary: Get all invoices
+      responses:
+        200:
+          description: List of invoices
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Invoice"
+              example:
+                - id: 1
+                  client: "Acme Corporation"
+                  amount: 1499.99
+                  description: "Website development services"
+                - id: 2
+                  client: "Globex Ltd"
+                  amount: 799.5
+                  description: "Monthly maintenance"
+
+    post:
+      summary: Create an invoice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvoiceInput"
+            example:
+              client: "Acme Corporation"
+              amount: 1499.99
+              description: "Website development services"
+      responses:
+        201:
+          description: Invoice created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invoice"
+              example:
+                id: 3
+                client: "Acme Corporation"
+                amount: 1499.99
+                description: "Website development services"
+
+  /invoices/{id}:
+    get:
+      summary: Get a single invoice
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            example: 1
+      responses:
+        200:
+          description: Invoice found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invoice"
+              example:
+                id: 1
+                client: "Acme Corporation"
+                amount: 1499.99
+                description: "Website development services"
+        404:
+          description: Invoice not found
+
+    put:
+      summary: Update an invoice
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvoiceInput"
+            example:
+              client: "Acme Corporation"
+              amount: 2000
+              description: "Updated contract amount"
+      responses:
+        200:
+          description: Invoice updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invoice"
+              example:
+                id: 1
+                client: "Acme Corporation"
+                amount: 2000
+                description: "Updated contract amount"
+        404:
+          description: Invoice not found
+
+    delete:
+      summary: Delete an invoice
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            example: 1
+      responses:
+        200:
+          description: Invoice deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  invoice:
+                    $ref: "#/components/schemas/Invoice"
+              example:
+                message: "Invoice deleted successfully"
+                invoice:
+                  id: 1
+                  client: "Acme Corporation"
+                  amount: 1499.99
+                  description: "Website development services"
+        404:
+          description: Invoice not found
+
+components:
+  schemas:
+    Invoice:
+      type: object
+      required:
+        - id
+        - client
+        - amount
+      properties:
+        id:
+          type: integer
+          example: 1
+        client:
+          type: string
+          example: "Acme Corporation"
+        amount:
+          type: number
+          example: 1499.99
+        description:
+          type: string
+          nullable: true
+          example: "Website development services"
+
+    InvoiceInput:
+      type: object
+      required:
+        - client
+        - amount
+      properties:
+        client:
+          type: string
+          example: "Acme Corporation"
+        amount:
+          type: number
+          example: 1499.99
+        description:
+          type: string
+          nullable: true
+          example: "Website development services"

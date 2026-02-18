@@ -2,6 +2,8 @@ import express from "express";
 import cors from "cors";
 import { z } from "zod";
 import dotenv from "dotenv";
+import { setupSwagger } from "../swagger";
+
 import pkg from "pg";
 
 const { Pool, types } = pkg;
@@ -12,6 +14,7 @@ types.setTypeParser(1700, (val: string) => parseFloat(val));
 dotenv.config();
 
 const app = express();
+setupSwagger(app);
 app.use(cors());
 app.use(express.json());
 
