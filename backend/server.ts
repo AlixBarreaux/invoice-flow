@@ -3,13 +3,15 @@ import cors from "cors";
 import { setupSwagger } from "./swagger";
 import logger from "./logger";
 import invoiceRoutes from "./routes/invoiceRoutes";
+import { requestLogger } from "./middleware/requestLogger";
 
 const app = express();
 
 setupSwagger(app);
 app.use(cors());
 app.use(express.json());
-
+// Log all incoming requests
+app.use(requestLogger);
 // Mount routes
 app.use("/invoices", invoiceRoutes);
 
