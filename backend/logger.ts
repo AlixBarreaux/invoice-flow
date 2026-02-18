@@ -1,18 +1,29 @@
 import { createLogger, format, transports } from "winston";
-import fs from "fs";
-import path from "path";
-
-const logDir = path.join(__dirname, "logs");
-
-// Ensure log directory exists
-if (!fs.existsSync(logDir)) {
-  fs.mkdirSync(logDir, { recursive: true });
-}
+import "winston-daily-rotate-file";
 
 const { combine, timestamp, printf, colorize, errors } = format;
 
 const logFormat = printf(({ level, message, timestamp, stack }) => {
   return `${timestamp} [${level}]: ${stack || message}`;
+});
+
+// Daily rotate transport
+const rotateTransport = new transports.DailyRotateFile({
+  dirname: "logs",          // folder for log files
+  filename: "%DATE%-combined.log", // filename pattern
+  datePattern: "YYYY-MM-DD",
+  zippedArchive: true,
+  maxFiles: "7d",           // keep logs for 7 days
+  level: "info",
+});
+
+const errorRotateTransport = new transports.DailyRotateFile({
+  dirname: "logs",
+  filename: "%DATE%-error.log",
+  datePattern: "YYYY-MM-DD",
+  zippedArchive: true,
+  maxFiles: "7d",
+  level: "error",
 });
 
 export const logger = createLogger({
@@ -25,8 +36,8 @@ export const logger = createLogger({
   ),
   transports: [
     new transports.Console(),
-    new transports.File({ filename: path.join(logDir, "error.log"), level: "error" }),
-    new transports.File({ filename: path.join(logDir, "combined.log") }),
+    rotateTransport,
+    errorRotateTransport,
   ],
 });
 
