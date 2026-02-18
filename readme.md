@@ -15,6 +15,10 @@
 http://localhost:5173
 
 
+#### Optional: Swagger
+
+http://localhost:3000/docs
+
 
 ## 🛑 Stop
 
