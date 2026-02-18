@@ -1,14 +1,17 @@
 import { useEffect, useState } from "react"
+import {
+  fetchInvoices as fetchInvoicesAPI,
+  createInvoice as createInvoiceAPI,
+  deleteInvoice as deleteInvoiceAPI,
+} from "../../api/invoices";
 
 type Invoice = {
-  id: string
+  id: number
   client: string
   amount: number
-  status: string
-  date: string
+  status?: string
+  date?: string
 }
-
-const API_URL = "http://localhost:3000/invoices"
 
 export default function InvoicesPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([])
@@ -21,9 +24,7 @@ export default function InvoicesPage() {
   const fetchInvoices = async () => {
     setLoading(true)
     try {
-      const res = await fetch(API_URL)
-      if (!res.ok) throw new Error("Network error")
-      const data = await res.json()
+      const data = await fetchInvoicesAPI()
       setInvoices(data)
     } catch (e) {
       alert("Failed to fetch invoices")
@@ -43,17 +44,12 @@ export default function InvoicesPage() {
     }
 
     try {
-      const res = await fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          client,
-          amount: Number(amount),
-          status,
-          date: new Date().toISOString().split("T")[0],
-        }),
+      await createInvoiceAPI({
+        client,
+        amount: Number(amount),
+        description: status,
       })
-      if (!res.ok) throw new Error("Create failed")
+      // You can include date/status if your backend supports it
     } catch (e) {
       alert("Failed to create invoice")
     }
@@ -64,10 +60,9 @@ export default function InvoicesPage() {
     fetchInvoices()
   }
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: number) => {
     try {
-      const res = await fetch(`${API_URL}/${id}`, { method: "DELETE" })
-      if (!res.ok) throw new Error("Delete failed")
+      await deleteInvoiceAPI(id)
     } catch (e) {
       alert("Failed to delete invoice")
     }
@@ -85,20 +80,20 @@ export default function InvoicesPage() {
         data-qa-tests="client-input"
         placeholder="Client"
         value={client}
-        onChange={e => setClient(e.target.value)}
+        onChange={(e) => setClient(e.target.value)}
       />
 
       <input
         data-qa-tests="amount-input"
         type="number"
         value={amount}
-        onChange={e => setAmount(e.target.value)}
+        onChange={(e) => setAmount(e.target.value)}
       />
 
       <select
         data-qa-tests="status-select"
         value={status}
-        onChange={e => setStatus(e.target.value)}
+        onChange={(e) => setStatus(e.target.value)}
       >
         <option value="paid">Paid</option>
         <option value="unpaid">Unpaid</option>
@@ -109,7 +104,7 @@ export default function InvoicesPage() {
       </button>
 
       <ul data-qa-tests="invoice-list">
-        {invoices.map(i => (
+        {invoices.map((i) => (
           <li key={i.id} data-qa-tests="invoice-row">
             {i.client} - ${i.amount} - {i.status}
             <button
