@@ -18,16 +18,29 @@ const bulkDeleteSchema = zod.object({
   ids: zod.array(zod.number()).min(1),
 });
 
+// Helper for ID validation
+function parseId(param: string) {
+  const id = Number(param);
+  if (!Number.isInteger(id) || id <= 0) {
+    return null;
+  }
+  return id;
+}
+
 // ------------------ Routes ------------------
 
 // Bulk create
 router.post("/bulk", async (req, res, next) => {
   try {
     const invoices = bulkInvoiceSchema.parse(req.body);
-    if (invoices.length === 0) return res.status(400).json({ message: "Array cannot be empty" });
+
+    if (invoices.length === 0) {
+      return res.status(400).json({ error: "Array cannot be empty" });
+    }
 
     const created = await invoiceService.bulkCreateInvoices(invoices);
     logger.info(`Bulk created ${created.length} invoices`);
+
     res.status(201).json(created);
   } catch (err) {
     logger.error("Bulk create failed", err);
@@ -39,9 +52,15 @@ router.post("/bulk", async (req, res, next) => {
 router.delete("/bulk", async (req, res, next) => {
   try {
     const { ids } = bulkDeleteSchema.parse(req.body);
+
     const deleted = await invoiceService.bulkDeleteInvoices(ids);
+
     logger.info(`Bulk deleted ${deleted.length} invoices`);
-    res.json({ message: "Invoices deleted successfully", deleted });
+
+    res.json({
+      message: "Invoices deleted successfully",
+      deletedCount: deleted.length,
+    });
   } catch (err) {
     logger.error("Bulk delete failed", err);
     next(err);
@@ -49,7 +68,7 @@ router.delete("/bulk", async (req, res, next) => {
 });
 
 // Get all
-router.get("/", async (req, res, next) => {
+router.get("/", async (_req, res, next) => {
   try {
     const invoices = await invoiceService.getAllInvoices();
     logger.info(`Fetched all invoices (${invoices.length})`);
@@ -62,12 +81,20 @@ router.get("/", async (req, res, next) => {
 // Get one
 router.get("/:id", async (req, res, next) => {
   try {
-    const id = Number(req.params.id);
+    const id = parseId(req.params.id);
+
+    if (!id) {
+      logger.warn(`Invalid invoice ID provided: ${req.params.id}`);
+      return res.status(400).json({ error: "Invalid invoice ID" });
+    }
+
     const invoice = await invoiceService.getInvoiceById(id);
+
     if (!invoice) {
       logger.warn(`Invoice ID=${id} not found`);
       return res.status(404).json({ error: "Invoice not found" });
     }
+
     logger.info(`Fetched invoice ID=${id}`);
     res.json(invoice);
   } catch (err) {
@@ -81,6 +108,7 @@ router.post("/", async (req, res, next) => {
   try {
     const data = invoiceSchema.parse(req.body);
     const invoice = await invoiceService.createInvoice(data);
+
     logger.info(`Created invoice ID=${invoice.id}`);
     res.status(201).json(invoice);
   } catch (err) {
@@ -92,13 +120,21 @@ router.post("/", async (req, res, next) => {
 // Update single
 router.put("/:id", async (req, res, next) => {
   try {
-    const id = Number(req.params.id);
+    const id = parseId(req.params.id);
+
+    if (!id) {
+      logger.warn(`Invalid invoice ID provided: ${req.params.id}`);
+      return res.status(400).json({ error: "Invalid invoice ID" });
+    }
+
     const data = invoiceSchema.parse(req.body);
     const invoice = await invoiceService.updateInvoice(id, data);
+
     if (!invoice) {
       logger.warn(`Invoice ID=${id} not found for update`);
       return res.status(404).json({ error: "Invoice not found" });
     }
+
     logger.info(`Updated invoice ID=${id}`);
     res.json(invoice);
   } catch (err) {
@@ -110,14 +146,22 @@ router.put("/:id", async (req, res, next) => {
 // Delete single
 router.delete("/:id", async (req, res, next) => {
   try {
-    const id = Number(req.params.id);
+    const id = parseId(req.params.id);
+
+    if (!id) {
+      logger.warn(`Invalid invoice ID provided: ${req.params.id}`);
+      return res.status(400).json({ error: "Invalid invoice ID" });
+    }
+
     const invoice = await invoiceService.deleteInvoice(id);
+
     if (!invoice) {
       logger.warn(`Invoice ID=${id} not found for deletion`);
       return res.status(404).json({ error: "Invoice not found" });
     }
+
     logger.info(`Deleted invoice ID=${id}`);
-    res.json({ message: "Invoice deleted", invoice });
+    res.json({ message: "Invoice deleted" });
   } catch (err) {
     logger.error(`Error deleting invoice ID=${req.params.id}`, err);
     next(err);
