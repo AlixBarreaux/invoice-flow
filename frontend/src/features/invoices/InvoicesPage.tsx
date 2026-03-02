@@ -3,14 +3,9 @@ import {
   fetchInvoices as fetchInvoicesAPI,
   createInvoice as createInvoiceAPI,
   deleteInvoice as deleteInvoiceAPI,
+  type Invoice,
 } from "../../api/invoices";
 
-type Invoice = {
-  id: number
-  client: string
-  amount: number
-  description?: string | null
-}
 
 export default function InvoicesPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([])
@@ -112,7 +107,8 @@ export default function InvoicesPage() {
       <ul data-qa-tests="invoice-list">
         {invoices.map((i) => (
           <li key={i.id} data-qa-tests="invoice-row">
-            {i.client} - ${i.amount} - {i.description}
+            {i.client} - ${i.amount} - {i.description} <br />
+            Created: {new Date(i.created_at).toLocaleString()} | Updated: {new Date(i.updated_at).toLocaleString()}
             <button
               data-qa-tests="delete-invoice-btn"
               onClick={() => handleDelete(i.id)}

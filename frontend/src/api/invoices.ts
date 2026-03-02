@@ -1,10 +1,12 @@
 const BASE_URL = "http://localhost:3000/invoices";
 
-type Invoice = {
+export type Invoice = {
   id: number
   client: string
   amount: number
   description?: string | null
+  created_at: string
+  updated_at: string
 }
 
 export async function fetchInvoices(page: number = 1, itemsPerPage: number = 20): Promise<{ invoices: Invoice[], total: number }> {
