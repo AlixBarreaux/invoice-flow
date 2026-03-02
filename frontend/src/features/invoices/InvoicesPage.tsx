@@ -9,8 +9,7 @@ type Invoice = {
   id: number
   client: string
   amount: number
-  status?: string
-  date?: string
+  description?: string | null
 }
 
 export default function InvoicesPage() {
@@ -21,17 +20,22 @@ export default function InvoicesPage() {
   const [amount, setAmount] = useState("")
   const [status, setStatus] = useState("unpaid")
 
-  const fetchInvoices = async () => {
-    setLoading(true)
-    try {
-      const data = await fetchInvoicesAPI()
-      setInvoices(data)
-    } catch (e) {
-      alert("Failed to fetch invoices")
-    } finally {
-      setLoading(false)
-    }
+  const [total, setTotal] = useState(0)
+  const [itemsPerPage] = useState(20)
+
+  const fetchInvoices = async (page?: number) => {
+  setLoading(true)
+  try {
+    const data = await fetchInvoicesAPI(page ?? 1, 20)
+    setInvoices(data.invoices)
+    setTotal(data.total)
+  } catch (e) {
+    alert("Failed to fetch invoices")
+  } finally {
+    setLoading(false)
   }
+}
+
 
   useEffect(() => {
     fetchInvoices()
@@ -49,15 +53,17 @@ export default function InvoicesPage() {
         amount: Number(amount),
         description: status,
       })
-      // You can include date/status if your backend supports it
-    } catch (e) {
-      alert("Failed to create invoice")
+    } catch (error) {
+      alert(`Failed to create invoice! Error: ${error}`)
+      return
     }
 
     setClient("")
     setAmount("")
     setStatus("unpaid")
-    fetchInvoices()
+
+    const lastPage = Math.ceil((total + 1) / itemsPerPage)
+    fetchInvoices(lastPage)
   }
 
   const handleDelete = async (id: number) => {
@@ -106,7 +112,7 @@ export default function InvoicesPage() {
       <ul data-qa-tests="invoice-list">
         {invoices.map((i) => (
           <li key={i.id} data-qa-tests="invoice-row">
-            {i.client} - ${i.amount} - {i.status}
+            {i.client} - ${i.amount} - {i.description}
             <button
               data-qa-tests="delete-invoice-btn"
               onClick={() => handleDelete(i.id)}

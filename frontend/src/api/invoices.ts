@@ -1,7 +1,14 @@
 const BASE_URL = "http://localhost:3000/invoices";
 
-export async function fetchInvoices() {
-  const res = await fetch(BASE_URL);
+type Invoice = {
+  id: number
+  client: string
+  amount: number
+  description?: string | null
+}
+
+export async function fetchInvoices(page: number = 1, itemsPerPage: number = 20): Promise<{ invoices: Invoice[], total: number }> {
+  const res = await fetch(`${BASE_URL}?page=${page}&itemsPerPage=${itemsPerPage}`);
   if (!res.ok) throw new Error("Failed to fetch invoices");
   return res.json();
 }
