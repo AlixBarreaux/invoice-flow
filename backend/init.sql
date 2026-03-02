@@ -3,6 +3,8 @@ CREATE TABLE IF NOT EXISTS invoices (
   client VARCHAR(255) NOT NULL,
   amount NUMERIC NOT NULL,
   description TEXT,
+  status VARCHAR(20) DEFAULT 'unpaid',
+  invoice_date DATE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );

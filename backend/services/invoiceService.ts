@@ -1,7 +1,6 @@
 import { pool } from "../db/pool";
 
-
-// Bulk create invoices
+// Bulk delete invoices
 export async function bulkDeleteInvoices(ids: number[]) {
   const result = await pool.query(
     `DELETE FROM invoices WHERE id = ANY($1::int[]) RETURNING *`,
@@ -10,26 +9,27 @@ export async function bulkDeleteInvoices(ids: number[]) {
   return result.rows;
 }
 
-// Bulk delete invoices
-export async function bulkCreateInvoices(invoices: { client: string; amount: number; description?: string | null }[]) {
+// Bulk create invoices
+export async function bulkCreateInvoices(
+  invoices: { client: string; amount: number; description?: string | null; status?: string; invoice_date?: string }[]
+) {
   const values: any[] = [];
   const placeholders: string[] = [];
 
   invoices.forEach((inv, i) => {
-    const baseIndex = i * 3;
-    placeholders.push(`($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3})`);
-    values.push(inv.client, inv.amount, inv.description ?? null);
+    const baseIndex = i * 5;
+    placeholders.push(`($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5})`);
+    values.push(inv.client, inv.amount, inv.description ?? null, inv.status ?? 'unpaid', inv.invoice_date ?? null);
   });
 
   if (placeholders.length === 0) return [];
 
   const result = await pool.query(
-    `INSERT INTO invoices (client, amount, description) VALUES ${placeholders.join(", ")} RETURNING *`,
+    `INSERT INTO invoices (client, amount, description, status, invoice_date) VALUES ${placeholders.join(", ")} RETURNING *`,
     values
   );
   return result.rows;
 }
-
 
 interface InvoiceFilters {
   client?: string;
@@ -44,7 +44,6 @@ export async function getAllInvoicesPaginated(
   filters: InvoiceFilters = {}
 ) {
   const offset = (page - 1) * itemsPerPage;
-
   const whereClauses: string[] = [];
   const values: any[] = [];
 
@@ -65,15 +64,13 @@ export async function getAllInvoicesPaginated(
 
   const whereSQL = whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
 
-  // Total count with filters
   const totalResult = await pool.query(`SELECT COUNT(*) FROM invoices ${whereSQL}`, values);
   const total = Number(totalResult.rows[0].count);
 
-  // Paginated rows with filters
   values.push(itemsPerPage, offset);
   const result = await pool.query(
-  `SELECT * FROM invoices ${whereSQL} ORDER BY id DESC LIMIT $${values.length - 1} OFFSET $${values.length}`,
-  values
+    `SELECT * FROM invoices ${whereSQL} ORDER BY id DESC LIMIT $${values.length - 1} OFFSET $${values.length}`,
+    values
   );
 
   return { invoices: result.rows, total };
@@ -86,10 +83,10 @@ export async function getInvoiceById(id: number) {
 }
 
 // Create single invoice
-export async function createInvoice(data: { client: string; amount: number; description?: string | null }) {
+export async function createInvoice(data: { client: string; amount: number; description?: string | null; status?: string; invoice_date?: string }) {
   const result = await pool.query(
-    "INSERT INTO invoices (client, amount, description) VALUES ($1, $2, $3) RETURNING *",
-    [data.client, data.amount, data.description ?? null]
+    "INSERT INTO invoices (client, amount, description, status, invoice_date) VALUES ($1, $2, $3, $4, $5) RETURNING *",
+    [data.client, data.amount, data.description ?? null, data.status ?? 'unpaid', data.invoice_date ?? null]
   );
   return result.rows[0];
 }
@@ -97,11 +94,11 @@ export async function createInvoice(data: { client: string; amount: number; desc
 // Update single invoice
 export async function updateInvoice(
   id: number,
-  data: { client: string; amount: number; description?: string | null }
+  data: { client: string; amount: number; description?: string | null; status?: string; invoice_date?: string }
 ) {
   const result = await pool.query(
-    "UPDATE invoices SET client=$1, amount=$2, description=$3 WHERE id=$4 RETURNING *",
-    [data.client, data.amount, data.description ?? null, id]
+    "UPDATE invoices SET client=$1, amount=$2, description=$3, status=$4, invoice_date=$5 WHERE id=$6 RETURNING *",
+    [data.client, data.amount, data.description ?? null, data.status ?? 'unpaid', data.invoice_date ?? null, id]
   );
   return result.rows[0] ?? null;
 }
