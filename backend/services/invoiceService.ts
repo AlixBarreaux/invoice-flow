@@ -30,18 +30,50 @@ export async function bulkCreateInvoices(invoices: { client: string; amount: num
   return result.rows;
 }
 
+
+interface InvoiceFilters {
+  client?: string;
+  minAmount?: number;
+  maxAmount?: number;
+}
+
 // Get all invoices paginated
-export async function getAllInvoicesPaginated(page: number, itemsPerPage: number) {
+export async function getAllInvoicesPaginated(
+  page: number,
+  itemsPerPage: number,
+  filters: InvoiceFilters = {}
+) {
   const offset = (page - 1) * itemsPerPage;
 
-  // Total count
-  const totalResult = await pool.query("SELECT COUNT(*) FROM invoices");
+  const whereClauses: string[] = [];
+  const values: any[] = [];
+
+  if (filters.client) {
+    values.push(`%${filters.client}%`);
+    whereClauses.push(`client ILIKE $${values.length}`);
+  }
+
+  if (filters.minAmount !== undefined) {
+    values.push(filters.minAmount);
+    whereClauses.push(`amount >= $${values.length}`);
+  }
+
+  if (filters.maxAmount !== undefined) {
+    values.push(filters.maxAmount);
+    whereClauses.push(`amount <= $${values.length}`);
+  }
+
+  const whereSQL = whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
+
+  // Total count with filters
+  const totalResult = await pool.query(`SELECT COUNT(*) FROM invoices ${whereSQL}`, values);
   const total = Number(totalResult.rows[0].count);
 
-  // Paginated rows
+  // Paginated rows with filters
+  values.push(itemsPerPage, offset);
   const result = await pool.query(
-    "SELECT * FROM invoices ORDER BY id ASC LIMIT $1 OFFSET $2",
-    [itemsPerPage, offset]
+    `SELECT * FROM invoices ${whereSQL} ORDER BY id ASC LIMIT $${values.length - 1} OFFSET $${values.length}`,
+    values
   );
 
   return { invoices: result.rows, total };

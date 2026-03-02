@@ -18,6 +18,14 @@ const bulkDeleteSchema = zod.object({
   ids: zod.array(zod.number()).min(1),
 });
 
+const invoiceQuerySchema = zod.object({
+  page: zod.coerce.number().int().positive().default(1),
+  itemsPerPage: zod.coerce.number().int().positive().max(100).default(20),
+  client: zod.string().trim().min(1).optional(),
+  minAmount: zod.coerce.number().nonnegative().optional(),
+  maxAmount: zod.coerce.number().nonnegative().optional(),
+});
+
 // Helper for ID validation
 function parseId(param: string) {
   const id = Number(param);
@@ -70,19 +78,25 @@ router.delete("/bulk", async (req, res, next) => {
 // Get all invoices paginated
 router.get("/", async (req, res, next) => {
   try {
-    // Read from query parameters
-    const page = Number(req.query.page) || 1;
-    const itemsPerPage = Number(req.query.itemsPerPage) || 20;
+    const parsed = invoiceQuerySchema.parse(req.query);
 
-    // Validate
-    if (!Number.isInteger(page) || page <= 0) {
-      return res.status(400).json({ error: "Invalid page number" });
-    }
-    if (!Number.isInteger(itemsPerPage) || itemsPerPage <= 0) {
-      return res.status(400).json({ error: "Invalid itemsPerPage number" });
-    }
+    // ✅ TYPE SANITY CHECK — PUT IT RIGHT HERE
+    console.log(
+      "TYPES:",
+      typeof parsed.page,
+      typeof parsed.itemsPerPage,
+      typeof parsed.minAmount,
+      typeof parsed.maxAmount
+    );
 
-    const { invoices, total } = await invoiceService.getAllInvoicesPaginated(page, itemsPerPage);
+    const { page, itemsPerPage, client, minAmount, maxAmount } = parsed;
+
+    const { invoices, total } =
+      await invoiceService.getAllInvoicesPaginated(
+        page,
+        itemsPerPage,
+        { client, minAmount, maxAmount }
+      );
 
     res.json({
       page,
@@ -91,6 +105,13 @@ router.get("/", async (req, res, next) => {
       invoices,
     });
   } catch (err) {
+    if (err instanceof zod.ZodError) {
+      return res.status(400).json({
+        error: "Invalid query parameters",
+        details: err.issues,
+      });
+    }
+
     next(err);
   }
 });
