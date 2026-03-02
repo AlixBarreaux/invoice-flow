@@ -29,7 +29,7 @@ function parseId(param: string) {
 
 // ------------------ Routes ------------------
 
-// Bulk create
+// Bulk create invoices
 router.post("/bulk", async (req, res, next) => {
   try {
     const invoices = bulkInvoiceSchema.parse(req.body);
@@ -48,7 +48,7 @@ router.post("/bulk", async (req, res, next) => {
   }
 });
 
-// Bulk delete
+// Bulk delete invoices
 router.delete("/bulk", async (req, res, next) => {
   try {
     const { ids } = bulkDeleteSchema.parse(req.body);
@@ -67,18 +67,35 @@ router.delete("/bulk", async (req, res, next) => {
   }
 });
 
-// Get all
-router.get("/", async (_req, res, next) => {
+// Get all invoices paginated
+router.get("/", async (req, res, next) => {
   try {
-    const invoices = await invoiceService.getAllInvoices();
-    logger.info(`Fetched all invoices (${invoices.length})`);
-    res.json(invoices);
+    // Read from query parameters
+    const page = Number(req.query.page) || 1;
+    const itemsPerPage = Number(req.query.itemsPerPage) || 20;
+
+    // Validate
+    if (!Number.isInteger(page) || page <= 0) {
+      return res.status(400).json({ error: "Invalid page number" });
+    }
+    if (!Number.isInteger(itemsPerPage) || itemsPerPage <= 0) {
+      return res.status(400).json({ error: "Invalid itemsPerPage number" });
+    }
+
+    const { invoices, total } = await invoiceService.getAllInvoicesPaginated(page, itemsPerPage);
+
+    res.json({
+      page,
+      itemsPerPage,
+      total,
+      invoices,
+    });
   } catch (err) {
     next(err);
   }
 });
 
-// Get one
+// Get single invoice
 router.get("/:id", async (req, res, next) => {
   try {
     const id = parseId(req.params.id);
@@ -103,7 +120,7 @@ router.get("/:id", async (req, res, next) => {
   }
 });
 
-// Create single
+// Create single invoice
 router.post("/", async (req, res, next) => {
   try {
     const data = invoiceSchema.parse(req.body);
@@ -117,7 +134,7 @@ router.post("/", async (req, res, next) => {
   }
 });
 
-// Update single
+// Update single invoice
 router.put("/:id", async (req, res, next) => {
   try {
     const id = parseId(req.params.id);
@@ -143,7 +160,7 @@ router.put("/:id", async (req, res, next) => {
   }
 });
 
-// Delete single
+// Delete single invoice
 router.delete("/:id", async (req, res, next) => {
   try {
     const id = parseId(req.params.id);
