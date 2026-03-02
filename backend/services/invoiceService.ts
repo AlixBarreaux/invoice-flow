@@ -72,8 +72,8 @@ export async function getAllInvoicesPaginated(
   // Paginated rows with filters
   values.push(itemsPerPage, offset);
   const result = await pool.query(
-    `SELECT * FROM invoices ${whereSQL} ORDER BY id ASC LIMIT $${values.length - 1} OFFSET $${values.length}`,
-    values
+  `SELECT * FROM invoices ${whereSQL} ORDER BY id DESC LIMIT $${values.length - 1} OFFSET $${values.length}`,
+  values
   );
 
   return { invoices: result.rows, total };
