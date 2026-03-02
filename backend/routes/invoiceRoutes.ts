@@ -20,6 +20,34 @@ const bulkDeleteSchema = z.object({
 
 // Routes
 
+// Bulk create
+router.post("/bulk", async (req, res, next) => {
+  try {
+    const invoices = bulkInvoiceSchema.parse(req.body);
+    if (invoices.length === 0) return res.status(400).json({ message: "Array cannot be empty" });
+
+    const created = await invoiceService.bulkCreateInvoices(invoices);
+    logger.info(`Bulk created ${created.length} invoices`);
+    res.status(201).json(created);
+  } catch (err) {
+    logger.error("Bulk create failed", err);
+    next(err);
+  }
+});
+
+// Bulk delete
+router.delete("/bulk", async (req, res, next) => {
+  try {
+    const { ids } = bulkDeleteSchema.parse(req.body);
+    const deleted = await invoiceService.bulkDeleteInvoices(ids);
+    logger.info(`Bulk deleted ${deleted.length} invoices`);
+    res.json({ message: "Invoices deleted successfully", deleted });
+  } catch (err) {
+    logger.error("Bulk delete failed", err);
+    next(err);
+  }
+});
+
 // Get all
 router.get("/", async (req, res, next) => {
   try {
@@ -92,34 +120,6 @@ router.delete("/:id", async (req, res, next) => {
     res.json({ message: "Invoice deleted", invoice });
   } catch (err) {
     logger.error(`Error deleting invoice ID=${req.params.id}`, err);
-    next(err);
-  }
-});
-
-// Bulk create
-router.post("/bulk", async (req, res, next) => {
-  try {
-    const invoices = bulkInvoiceSchema.parse(req.body);
-    if (invoices.length === 0) return res.status(400).json({ message: "Array cannot be empty" });
-
-    const created = await invoiceService.bulkCreateInvoices(invoices);
-    logger.info(`Bulk created ${created.length} invoices`);
-    res.status(201).json(created);
-  } catch (err) {
-    logger.error("Bulk create failed", err);
-    next(err);
-  }
-});
-
-// Bulk delete
-router.delete("/bulk", async (req, res, next) => {
-  try {
-    const { ids } = bulkDeleteSchema.parse(req.body);
-    const deleted = await invoiceService.bulkDeleteInvoices(ids);
-    logger.info(`Bulk deleted ${deleted.length} invoices`);
-    res.json({ message: "Invoices deleted successfully", deleted });
-  } catch (err) {
-    logger.error("Bulk delete failed", err);
     next(err);
   }
 });
