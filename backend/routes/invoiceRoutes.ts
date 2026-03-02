@@ -1,24 +1,24 @@
 import { Router } from "express";
-import { z } from "zod";
+import { z as zod} from "zod";
 import * as invoiceService from "../services/invoiceService";
 import logger from "../logger";
 
 const router = Router();
 
-// Schemas
-const invoiceSchema = z.object({
-  client: z.string(),
-  amount: z.number(),
-  description: z.string().optional(),
+// ------------------ Schemas ------------------
+const invoiceSchema = zod.object({
+  client: zod.string(),
+  amount: zod.number(),
+  description: zod.string().optional(),
 });
 
-const bulkInvoiceSchema = z.array(invoiceSchema);
+const bulkInvoiceSchema = zod.array(invoiceSchema);
 
-const bulkDeleteSchema = z.object({
-  ids: z.array(z.number()).min(1),
+const bulkDeleteSchema = zod.object({
+  ids: zod.array(zod.number()).min(1),
 });
 
-// Routes
+// ------------------ Routes ------------------
 
 // Bulk create
 router.post("/bulk", async (req, res, next) => {
